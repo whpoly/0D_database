@@ -1,8 +1,5 @@
-# Core web app dependencies
-Dash>=2.17,<3
-crystal-toolkit>=2024.5
-pymatgen>=2024.5
-
-# Production WSGI servers (platform specific)
-gunicorn>=21.2; platform_system != "Windows"
-waitress>=3.0; platform_system == "Windows"
+# Core web app dependencies (pip path for Linux/macOS)
+# On Windows, prefer: conda env create -f environment.yml
+dash>=4,<5
+crystal-toolkit>=2025.10
+pymatgen>=2025.10
