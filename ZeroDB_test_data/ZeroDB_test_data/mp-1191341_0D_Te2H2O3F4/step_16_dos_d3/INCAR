@@ -1,0 +1,28 @@
+
+ALGO = Fast
+
+ICHARG = 11
+LORBIT = 11
+NEDOS = 4000
+
+ENCUT = 600
+ISMEAR = -5
+EDIFF = 1.0E-6
+PREC = Accurate
+NELM = 200
+
+MAGMOM = 22*0.6
+ISPIN = 1
+
+LMAXMIX = 4
+
+LASPH = True
+
+IVDW = 12
+
+LWAVE = .FALSE.
+LCHARG = .FALSE.
+LREAL = Auto
+
+NPAR = 8
+

@@ -1,0 +1,19 @@
+#!/bin/bash
+#PBS -N ZeroD
+#PBS -l select=1:ncpus=64:mpiprocs=1:ompthreads=64:mem=128gb
+#PBS -l walltime=24:00:00
+##PBS -m be
+##PBS -M phyv250@visitor.nus.edu.sg
+#PBS -P 13003587
+
+module swap PrgEnv-cray PrgEnv-intel/8.3.3
+module load hdf5/1.8.17-intel
+
+cd ${PBS_O_WORKDIR}
+
+#main_dir=`pwd`
+
+#mpirun -np $NCPUS --cpu-bind depth -d $OMP_NUM_THREADS /home/users/astar/i2r/zengmg1/.local_YangTong/VASP/vasp.5.4.4.pl2/bin/vasp_std 1>out 2>error
+mpirun -np $NCPUS --cpu-bind depth -d $OMP_NUM_THREADS /home/users/astar/i2r/zengmg1/.local_YangTong/VASP/vasp.6.4.0/vasp.6.4.0/bin/vasp_std 1>out 2>error
+
+

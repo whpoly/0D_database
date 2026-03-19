@@ -1,0 +1,29 @@
+ running   64 mpi-ranks, on    1 nodes
+ distrk:  each k-point on   64 cores,    1 groups
+ distr:  one band on    8 cores,    8 groups
+ vasp.6.4.0 14Feb23 (build Apr 20 2023 11:28:40) complex                        
+  
+ POSCAR found type information on POSCAR SbS O 
+ POSCAR found :  3 types and      52 ions
+ scaLAPACK will be used
+ LDA part: xc-table for Pade appr. of Perdew
+ WARNING: stress and forces are not correct
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ... GRIDC
+ FFT: planning ... GRID_SOFT
+ FFT: planning ... GRID
+ WAVECAR not read
+ charge-density read from file: unknown                                 
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1     0.267388675178E+04    0.26739E+04   -0.16175E+05 61760   0.170E+03
+DAV:   2    -0.526662608253E+02   -0.27266E+04   -0.26365E+04 79224   0.342E+02
+DAV:   3    -0.306528317706E+03   -0.25386E+03   -0.25026E+03 68008   0.122E+02
+DAV:   4    -0.312964906326E+03   -0.64366E+01   -0.64064E+01 74056   0.194E+01
+DAV:   5    -0.313205271515E+03   -0.24037E+00   -0.24023E+00 83160   0.345E+00
+RMM:   6    -0.313208527865E+03   -0.32564E-02   -0.32564E-02 63786   0.496E-01
+RMM:   7    -0.313209797932E+03   -0.12701E-02   -0.12660E-02 84978   0.198E-01
+RMM:   8    -0.313209879265E+03   -0.81333E-04   -0.88291E-04 85312   0.627E-02
+RMM:   9    -0.313209895727E+03   -0.16462E-04   -0.16671E-04 83108   0.161E-02
+RMM:  10    -0.313209896056E+03   -0.32930E-06   -0.57206E-06 54925   0.500E-03
+   1 F= -.32156823E+03 E0= -.32156823E+03  d E =-.214767E-11

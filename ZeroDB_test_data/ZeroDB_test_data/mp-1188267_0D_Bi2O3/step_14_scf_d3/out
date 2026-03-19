@@ -1,0 +1,43 @@
+ ----------------------------------------------------
+    OOO  PPPP  EEEEE N   N M   M PPPP
+   O   O P   P E     NN  N MM MM P   P
+   O   O PPPP  EEEEE N N N M M M PPPP   -- VERSION
+   O   O P     E     N  NN M   M P
+    OOO  P     EEEEE N   N M   M P
+ ----------------------------------------------------
+ running   16 mpi-ranks, with    1 threads/rank
+ distrk:  each k-point on   16 cores,    1 groups
+ distr:  one band on    4 cores,    4 groups
+ vasp.6.3.0 20Jan22 (build Jan 28 2022 00:43:23) complex                        
+  
+ POSCAR found type information on POSCAR BiO 
+ POSCAR found :  2 types and      20 ions
+ scaLAPACK will be used
+ WARNING: PSMAXN for non-local potential too small
+ LDA part: xc-table for Pade appr. of Perdew
+ POSCAR, INCAR and KPOINTS ok, starting setup
+ FFT: planning ... GRIDC
+ FFT: planning ... GRID_SOFT
+ FFT: planning ... GRID
+ WAVECAR not read
+ entering main loop
+       N       E                     dE             d eps       ncg     rms          rms(c)
+DAV:   1     0.837958819516E+03    0.83796E+03   -0.56215E+04  1360   0.163E+03
+DAV:   2    -0.398760324293E+02   -0.87783E+03   -0.84399E+03  1720   0.302E+02
+DAV:   3    -0.137339823724E+03   -0.97464E+02   -0.96369E+02  1612   0.109E+02
+DAV:   4    -0.140241133590E+03   -0.29013E+01   -0.28885E+01  1744   0.183E+01
+DAV:   5    -0.140333024796E+03   -0.91891E-01   -0.91840E-01  1680   0.315E+00    0.316E+01
+RMM:   6    -0.112493316708E+03    0.27840E+02   -0.14085E+02  1416   0.365E+01    0.109E+01
+RMM:   7    -0.113656901719E+03   -0.11636E+01   -0.21266E+01  1597   0.104E+01    0.754E+00
+RMM:   8    -0.113492621107E+03    0.16428E+00   -0.44043E+00  1483   0.784E+00    0.244E+00
+RMM:   9    -0.113470768586E+03    0.21853E-01   -0.16802E+00  1753   0.293E+00    0.557E-01
+RMM:  10    -0.113499572487E+03   -0.28804E-01   -0.28030E-01  1823   0.125E+00    0.673E-01
+RMM:  11    -0.113494513819E+03    0.50587E-02   -0.89983E-02  1555   0.959E-01    0.247E-01
+RMM:  12    -0.113493377932E+03    0.11359E-02   -0.79940E-03  1570   0.311E-01    0.126E-01
+RMM:  13    -0.113493329316E+03    0.48616E-04   -0.36384E-03  1632   0.179E-01    0.569E-02
+RMM:  14    -0.113493483127E+03   -0.15381E-03   -0.10526E-03  1701   0.868E-02    0.420E-02
+RMM:  15    -0.113493455646E+03    0.27481E-04   -0.36225E-04  1772   0.447E-02    0.166E-02
+RMM:  16    -0.113493464542E+03   -0.88959E-05   -0.12360E-04  1872   0.213E-02    0.504E-03
+RMM:  17    -0.113493465253E+03   -0.71148E-06   -0.13023E-05  1504   0.102E-02    0.301E-03
+RMM:  18    -0.113493465194E+03    0.58852E-07   -0.26647E-06  1115   0.407E-03
+   1 F= -.11847904E+03 E0= -.11847904E+03  d E =-.189188E-11
