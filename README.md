@@ -69,6 +69,12 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
+## Deployment Guidance
+
+For a practical deployment path and a scalable architecture plan for thousands of materials, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
+
+For the concrete deployment files added to this repository, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## UI Usage
 
 - Home page: Browse all materials with filter and sort support.

@@ -1,0 +1,18 @@
+[Unit]
+Description=ZeroDB Dash Application
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=www-data
+WorkingDirectory=/opt/zerodb
+EnvironmentFile=/opt/zerodb/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/miniconda3/envs/web/bin/gunicorn -c /opt/zerodb/gunicorn.conf.py
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

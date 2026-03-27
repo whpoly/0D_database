@@ -12,13 +12,65 @@ import crystal_toolkit.components as ctc
 from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output, State
 from pymatgen.core import Structure
+from pymatgen.electronic_structure.bandstructure import BandStructureSymmLine
+from pymatgen.electronic_structure.dos import CompleteDos
 from pymatgen.io.vasp.outputs import Vasprun
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(BASE_DIR, "ZeroDB_test_data.json")
-RADIUS_PATH = os.path.join(BASE_DIR, "atomic_radius.json")
-DFT_ROOT_DIR = os.path.join(BASE_DIR, "ZeroDB_test_data", "ZeroDB_test_data")
+
+
+def load_env_file(path: str) -> None:
+    if not os.path.isfile(path):
+        return
+
+    with open(path, "r", encoding="utf-8") as f:
+        for raw_line in f:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            os.environ.setdefault(key, value)
+
+
+def env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
+def env_path(name: str, default: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        return default
+    return value if os.path.isabs(value) else os.path.join(BASE_DIR, value)
+
+
+load_env_file(os.path.join(BASE_DIR, ".env"))
+
+APP_ENV = os.getenv("ZERO_DB_ENV", "development").strip().lower()
+APP_HOST = os.getenv("ZERO_DB_HOST", "127.0.0.1")
+APP_PORT = env_int("ZERO_DB_PORT", 8050)
+APP_DEBUG = env_bool("ZERO_DB_DEBUG", APP_ENV != "production")
+APP_DEV_TOOLS_UI = env_bool("ZERO_DB_DEV_TOOLS_UI", APP_ENV != "production")
+
+DATA_PATH = env_path("ZERO_DB_DATA_PATH", os.path.join(BASE_DIR, "ZeroDB_test_data.json"))
+RADIUS_PATH = env_path("ZERO_DB_RADIUS_PATH", os.path.join(BASE_DIR, "atomic_radius.json"))
+DFT_ROOT_DIR = env_path("ZERO_DB_DFT_ROOT_DIR", os.path.join(BASE_DIR, "ZeroDB_test_data", "ZeroDB_test_data"))
+DOS_BS_DIR = env_path("ZERO_DB_DOS_BS_DIR", os.path.join(BASE_DIR, "dos_bs"))
 
 
 def load_zerodb_columns(path: str) -> dict[str, dict[str, Any]]:
@@ -172,51 +224,102 @@ def resolve_vasprun_path(step_dir: str) -> str | None:
     return None
 
 
+@lru_cache(maxsize=256)
+def load_serialized_json_file(path: str) -> Any:
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except Exception:
+        return None
+    return payload
+
+
+def material_serialized_json_path(material_id: str, filename: str) -> str:
+    return os.path.join(DOS_BS_DIR, material_id, filename)
+
+
+def load_bandstructure_from_json(material_id: str):
+    payload = load_serialized_json_file(material_serialized_json_path(material_id, "bs.json"))
+    if payload is None:
+        return None, None
+    if not isinstance(payload, dict):
+        return None, "Bandstructure JSON entry is invalid."
+    try:
+        return BandStructureSymmLine.from_dict(payload), None
+    except Exception as exc:
+        return None, f"Bandstructure JSON parse failed: {exc}"
+
+
+def load_dos_from_json(material_id: str):
+    payload = load_serialized_json_file(material_serialized_json_path(material_id, "dos.json"))
+    if payload is None:
+        return None, None
+    if not isinstance(payload, dict):
+        return None, "DOS JSON entry is invalid."
+    try:
+        return CompleteDos.from_dict(payload), None
+    except Exception as exc:
+        return None, f"DOS JSON parse failed: {exc}"
+
+
 @lru_cache(maxsize=64)
 def load_bs_dos_for_material(material_id: str):
     material_dir = os.path.join(DFT_ROOT_DIR, material_id)
-    if not os.path.isdir(material_dir):
-        return None, None, f"DFT folder not found for {material_id}."
-
     bs = None
     dos = None
     errors: list[str] = []
 
-    band_dir = os.path.join(material_dir, "step_15_band_str_d3")
-    band_vasprun = resolve_vasprun_path(band_dir)
-    if band_vasprun is None:
-        errors.append("Bandstructure vasprun.xml(.gz) not found")
-    else:
-        try:
-            band_run = Vasprun(
-                band_vasprun,
-                parse_projected_eigen=False,
-                parse_potcar_file=False,
-            )
-            kpoints_path = os.path.join(band_dir, "KPOINTS")
-            if os.path.isfile(kpoints_path):
-                bs = band_run.get_band_structure(kpoints_filename=kpoints_path, line_mode=True)
-            else:
-                bs = band_run.get_band_structure(line_mode=True)
-        except Exception as exc:
-            errors.append(f"Bandstructure parse failed: {exc}")
+    bs, bs_json_error = load_bandstructure_from_json(material_id)
+    if bs_json_error:
+        errors.append(bs_json_error)
 
-    dos_dir = os.path.join(material_dir, "step_16_dos_d3")
-    dos_vasprun = resolve_vasprun_path(dos_dir)
-    if dos_vasprun is None:
-        errors.append("DOS vasprun.xml(.gz) not found")
-    else:
-        try:
-            dos_run = Vasprun(
-                dos_vasprun,
-                parse_projected_eigen=False,
-                parse_potcar_file=False,
-            )
-            dos = dos_run.complete_dos
-            if dos is None:
-                errors.append("Complete DOS not available in vasprun")
-        except Exception as exc:
-            errors.append(f"DOS parse failed: {exc}")
+    dos, dos_json_error = load_dos_from_json(material_id)
+    if dos_json_error:
+        errors.append(dos_json_error)
+
+    material_dir_exists = os.path.isdir(material_dir)
+    if not material_dir_exists and bs is None and dos is None:
+        return None, None, f"DFT folder not found for {material_id}, and no JSON cache entry was found."
+
+    if bs is None and material_dir_exists:
+        band_dir = os.path.join(material_dir, "step_15_band_str_d3")
+        band_vasprun = resolve_vasprun_path(band_dir)
+        if band_vasprun is None:
+            errors.append("Bandstructure vasprun.xml(.gz) not found")
+        else:
+            try:
+                band_run = Vasprun(
+                    band_vasprun,
+                    parse_projected_eigen=False,
+                    parse_potcar_file=False,
+                )
+                kpoints_path = os.path.join(band_dir, "KPOINTS")
+                if os.path.isfile(kpoints_path):
+                    bs = band_run.get_band_structure(kpoints_filename=kpoints_path, line_mode=True)
+                else:
+                    bs = band_run.get_band_structure(line_mode=True)
+            except Exception as exc:
+                errors.append(f"Bandstructure parse failed: {exc}")
+
+    if dos is None and material_dir_exists:
+        dos_dir = os.path.join(material_dir, "step_16_dos_d3")
+        dos_vasprun = resolve_vasprun_path(dos_dir)
+        if dos_vasprun is None:
+            errors.append("DOS vasprun.xml(.gz) not found")
+        else:
+            try:
+                dos_run = Vasprun(
+                    dos_vasprun,
+                    parse_projected_eigen=False,
+                    parse_potcar_file=False,
+                )
+                dos = dos_run.complete_dos
+                if dos is None:
+                    errors.append("Complete DOS not available in vasprun")
+            except Exception as exc:
+                errors.append(f"DOS parse failed: {exc}")
 
     error_text = " ; ".join(errors) if errors else None
     return bs, dos, error_text
@@ -425,6 +528,7 @@ app.layout = html.Div(
     [
         dcc.Location(id="url", refresh=False),
         dcc.Store(id="selected-material-id"),
+        dcc.Store(id="bonding-algorithm-store", data="CrystalNN"),
         dcc.Store(id="pending-custom-cutoffs"),
         html.Div(id="page-content"),
     ]
@@ -468,6 +572,26 @@ def update_structure(material_id: str | None):
     if structure is None:
         raise dash.exceptions.PreventUpdate
     return structure
+
+
+@app.callback(
+    Output("bonding-algorithm-store", "data"),
+    Input("selected-material-id", "data"),
+    Input("apply-custom-bonds-btn", "n_clicks"),
+)
+def sync_bonding_algorithm_store(material_id: str | None, n_clicks: int | None):
+    triggered_id = dash.ctx.triggered_id
+    if triggered_id == "apply-custom-bonds-btn" and n_clicks:
+        return "CutOffDictNN"
+    return "CrystalNN"
+
+
+@app.callback(
+    Output(structure_component.id("bonding_algorithm"), "value"),
+    Input("bonding-algorithm-store", "data"),
+)
+def update_bonding_algorithm_value(bonding_algorithm: str | None):
+    return bonding_algorithm or "CrystalNN"
 
 
 @app.callback(Output("bs-dos-visualization", "children"), Input("selected-material-id", "data"))
@@ -647,7 +771,6 @@ def update_decomposition(material_id: str | None, partition_idx: int | None):
 
 
 @app.callback(
-    Output(structure_component.id("bonding_algorithm"), "value"),
     Output(structure_component.id("bonding_algorithm_custom_cutoffs"), "data", allow_duplicate=True),
     Output("pending-custom-cutoffs", "data"),
     Output("custom-apply-status", "children"),
@@ -680,7 +803,6 @@ def apply_custom_bonds(
     updated_rows, missing_elements = build_custom_cutoff_rows_for_structure(structure, use_tol)
     if not updated_rows:
         return (
-            "CutOffDictNN",
             dash.no_update,
             dash.no_update,
             "Could not build custom cutoffs from structure data.",
@@ -693,7 +815,7 @@ def apply_custom_bonds(
     if missing_elements:
         status += f" Missing atomic radius for: {', '.join(missing_elements)}."
 
-    return "CutOffDictNN", updated_rows, {"rows": updated_rows}, status
+    return updated_rows, {"rows": updated_rows}, status
 
 
 @app.callback(
@@ -726,4 +848,9 @@ def push_pending_custom_cutoffs(
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8050, dev_tools_ui=False)
+    app.run(
+        host=APP_HOST,
+        port=APP_PORT,
+        debug=APP_DEBUG,
+        dev_tools_ui=APP_DEV_TOOLS_UI,
+    )
