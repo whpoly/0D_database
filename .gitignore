@@ -3,4 +3,5 @@ __pycache__/
 *.log
 *.bak
 .env
+ZeroDB_test_data/
 
