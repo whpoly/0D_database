@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import json
 import os
 import urllib.parse
@@ -13,7 +14,7 @@ from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output, State
 from pymatgen.core import Structure
 from pymatgen.electronic_structure.bandstructure import BandStructureSymmLine
-from pymatgen.electronic_structure.dos import CompleteDos
+from pymatgen.electronic_structure.dos import CompleteDos, Dos
 from pymatgen.io.vasp.outputs import Vasprun
 
 
@@ -229,7 +230,8 @@ def load_serialized_json_file(path: str) -> Any:
     if not os.path.isfile(path):
         return None
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        opener = gzip.open if path.endswith(".gz") else open
+        with opener(path, "rt", encoding="utf-8") as f:
             payload = json.load(f)
     except Exception:
         return None
@@ -240,8 +242,26 @@ def material_serialized_json_path(material_id: str, filename: str) -> str:
     return os.path.join(DOS_BS_DIR, material_id, filename)
 
 
+def resolve_serialized_json_path(material_id: str, filename: str) -> str | None:
+    base_path = material_serialized_json_path(material_id, filename)
+    candidates = [base_path]
+
+    if filename.endswith(".gz"):
+        candidates.append(base_path[:-3])
+    else:
+        candidates.append(base_path + ".gz")
+
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
 def load_bandstructure_from_json(material_id: str):
-    payload = load_serialized_json_file(material_serialized_json_path(material_id, "bs.json"))
+    path = resolve_serialized_json_path(material_id, "bs.json")
+    if path is None:
+        return None, None
+    payload = load_serialized_json_file(path)
     if payload is None:
         return None, None
     if not isinstance(payload, dict):
@@ -253,12 +273,18 @@ def load_bandstructure_from_json(material_id: str):
 
 
 def load_dos_from_json(material_id: str):
-    payload = load_serialized_json_file(material_serialized_json_path(material_id, "dos.json"))
+    path = resolve_serialized_json_path(material_id, "dos.json")
+    if path is None:
+        return None, None
+    payload = load_serialized_json_file(path)
     if payload is None:
         return None, None
     if not isinstance(payload, dict):
         return None, "DOS JSON entry is invalid."
     try:
+        dos_class = payload.get("@class")
+        if dos_class == "Dos":
+            return Dos.from_dict(payload), None
         return CompleteDos.from_dict(payload), None
     except Exception as exc:
         return None, f"DOS JSON parse failed: {exc}"
@@ -427,6 +453,8 @@ def create_details_layout() -> html.Div:
     }
     return html.Div(
         [
+            dcc.Store(id="bonding-algorithm-store", data="CrystalNN"),
+            dcc.Store(id="pending-custom-cutoffs"),
             dcc.Link(
                 "Back to Table",
                 href="/",
@@ -528,9 +556,17 @@ app.layout = html.Div(
     [
         dcc.Location(id="url", refresh=False),
         dcc.Store(id="selected-material-id"),
-        dcc.Store(id="bonding-algorithm-store", data="CrystalNN"),
-        dcc.Store(id="pending-custom-cutoffs"),
         html.Div(id="page-content"),
+    ]
+)
+
+# Include every page's components in Dash's callback validation tree so
+# route-specific callbacks can safely reference detail-page ids.
+app.validation_layout = html.Div(
+    [
+        app.layout,
+        create_table_layout(),
+        create_details_layout(),
     ]
 )
 
@@ -607,7 +643,8 @@ def update_bs_dos_visualization(material_id: str | None):
         )
 
     try:
-        fig = ctc.BandstructureAndDosComponent.get_figure(bs, dos)
+        dos_select = "ap" if isinstance(dos, CompleteDos) else "tot"
+        fig = ctc.BandstructureAndDosComponent.get_figure(bs, dos, dos_select=dos_select)
 
         def _tighten_axis_spacing(layout_dict: dict[str, Any]) -> None:
             # Keep axis titles clear of tick labels on both BS and DOS subplots.

@@ -23,36 +23,33 @@
 - atomic_radius.json: Atomic radius lookup used for custom bonding cutoffs.
 - ZeroDB_test_data/ZeroDB_test_data/: Per-material DFT data folders.
 - main.py: Dash app entry point.
-- environment.yml: Recommended Conda environment definition.
-- requirements.txt: Optional pip dependency list (mainly for Linux/macOS).
+- requirements.txt: Unified pip dependency list for local use and deployment.
 
 ## Tech Stack
 
-- Python 3.10
+- Python 3.11
 - Dash
 - Crystal Toolkit
 - pymatgen
 
 ## Quick Start
 
-### Option 1 (Recommended for Windows/Conda)
+### Option 1 (Recommended: fresh Conda env + pip)
 
-Create environment (first time only):
+Create and activate a fresh Conda environment:
 
 ```bash
-conda env create -f environment.yml
+conda create -n web_2 python=3.11 -y
+conda activate web_2
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-Update environment (if web already exists):
+If you only want the minimum package needed to run the app locally, `pip install crystal-toolkit` is enough.
+
+Run the app:
 
 ```bash
-conda env update -n web -f environment.yml
-```
-
-Activate and run:
-
-```bash
-conda activate web
 python main.py
 ```
 
@@ -62,14 +59,20 @@ Open in browser:
 http://127.0.0.1:8050
 ```
 
-### Option 2 (pip, usually Linux/macOS)
+### Option 2 (minimal local install)
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install crystal-toolkit
 python main.py
 ```
 
 ## Deployment Guidance
+
+Production run example:
+
+```bash
+ZERO_DB_GUNICORN_BIND=0.0.0.0:80 ZERO_DB_GUNICORN_WORKERS=2 ZERO_DB_GUNICORN_THREADS=2 ./scripts/run_prod.sh
+```
 
 For a practical deployment path and a scalable architecture plan for thousands of materials, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
@@ -85,10 +88,10 @@ For the concrete deployment files added to this repository, see [DEPLOYMENT.md](
 ## Troubleshooting
 
 - Error: ModuleNotFoundError: No module named crystal_toolkit
-- Fix: Activate the web environment and install dependencies using environment.yml.
+- Fix: Activate your Conda environment and run `pip install crystal-toolkit`.
 
-- Error: pip install fails on Windows while building boltztrap2.
-- Fix: Use the Conda workflow with conda env create/update -f environment.yml.
+- Error: Deployment shows `ELEMENTS_HO` or `pourbaix` import issues.
+- Fix: In the deployed environment's `crystal_toolkit/components/pourbaix.py`, add a fallback `ELEMENTS_HO = {Element("H"), Element("O")}` if that constant is missing.
 
 - Error: Cannot open http://127.0.0.1:8050.
 - Fix: Confirm the app is running and port 8050 is not occupied.

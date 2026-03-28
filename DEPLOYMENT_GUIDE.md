@@ -23,7 +23,7 @@
 这意味着当前项目最短上线路径不是“重写网站”，而是：
 
 1. 把代码和数据放到 Linux 服务器。
-2. 用 Conda 建环境。
+2. 用 Conda 建一个空环境，再安装统一的 `requirements.txt`。
 3. 用 Gunicorn 跑 `main:server`。
 4. 用 Nginx 反向代理到你的域名。
 
@@ -54,10 +54,19 @@ cd zerodb
 #### 步骤 2：建立 Conda 环境
 
 ```bash
-conda env create -f environment.yml
-conda activate web
-pip install gunicorn
+conda create -n web_2 python=3.11 -y
+conda activate web_2
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
+
+如果你只是想先在本机快速验证应用能不能起来，那么最小安装其实只需要：
+
+```bash
+pip install crystal-toolkit
+```
+
+正式部署时则建议直接装 `requirements.txt`，这样 `gunicorn` 也会一起到位。
 
 #### 步骤 3：先在服务器本机试跑
 
@@ -78,7 +87,7 @@ http://127.0.0.1:8050
 改用：
 
 ```bash
-conda activate web
+conda activate web_2
 gunicorn -w 2 -b 0.0.0.0:8050 main:server
 ```
 
@@ -87,6 +96,7 @@ gunicorn -w 2 -b 0.0.0.0:8050 main:server
 - `main` 是模块名，对应 `main.py`
 - `server` 是代码里已经暴露出来的 Flask/WGSI server
 - `-w 2` 表示先开 2 个 worker，后面可按机器配置调到 2 到 4
+- 如果部署环境报 `pourbaix` / `ELEMENTS_HO` 相关错误，再去对应环境的 `crystal_toolkit/components/pourbaix.py` 里补一个 `ELEMENTS_HO = {Element("H"), Element("O")}` 的兼容定义即可
 
 #### 步骤 5：Nginx 反向代理
 
@@ -202,11 +212,27 @@ server {
 
 网站详情页只读取已经预处理好的摘要结果。
 
+如果你还需要保留完整 `pdos`，也不要直接放未压缩的 `dos.json`。
+当前项目已经可以读取 `bs.json.gz` 和 `dos.json.gz`，建议优先把缓存压缩后再部署。
+
+例如：
+
+```bash
+python scripts/export_bs_dos_json.py --gzip-output --backup-dir-suffix ''
+```
+
+如果 `dos_bs/` 已经生成好了，也可以直接压缩现有缓存：
+
+```bash
+python scripts/compress_bs_dos_cache.py --delete-originals
+```
+
 这样会明显降低：
 
 - 页面打开时间
 - CPU 占用
 - 多用户同时访问时的解析压力
+- 硬盘占用
 
 #### D. 首页表格改成后端分页
 

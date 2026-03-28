@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import shutil
 from pathlib import Path
@@ -54,6 +55,11 @@ def parse_args() -> argparse.Namespace:
         "--backup-dir-suffix",
         default=".bak",
         help="Backup suffix for an existing output root directory. Use an empty string to disable backups.",
+    )
+    parser.add_argument(
+        "--gzip-output",
+        action="store_true",
+        help="Write bs/dos cache files as .json.gz to reduce disk usage.",
     )
     return parser.parse_args()
 
@@ -137,8 +143,15 @@ def maybe_backup(path: Path, backup_suffix: str) -> Path | None:
 
 def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as handle:
+    opener = gzip.open if path.suffix == ".gz" else path.open
+    with opener(path, "wt", encoding="utf-8") as handle:
         json.dump(payload, handle, ensure_ascii=False, separators=(",", ":"))
+
+
+def output_path(target_dir: Path, filename: str, gzip_output: bool) -> Path:
+    if gzip_output and not filename.endswith(".gz"):
+        filename = f"{filename}.gz"
+    return target_dir / filename
 
 
 def main() -> None:
@@ -159,8 +172,8 @@ def main() -> None:
         target_dir.mkdir(parents=True, exist_ok=True)
 
         if not material_dir.is_dir():
-            write_json(target_dir / args.bs_filename, None)
-            write_json(target_dir / args.dos_filename, None)
+            write_json(output_path(target_dir, args.bs_filename, args.gzip_output), None)
+            write_json(output_path(target_dir, args.dos_filename, args.gzip_output), None)
             print(f"[{index}/{len(material_ids)}] {material_id}: material folder missing")
             continue
 
@@ -179,8 +192,8 @@ def main() -> None:
         except Exception as exc:  # pragma: no cover - batch best effort
             dos_error = f"dos failed ({type(exc).__name__}: {exc})"
 
-        write_json(target_dir / args.bs_filename, bs_payload)
-        write_json(target_dir / args.dos_filename, dos_payload)
+        write_json(output_path(target_dir, args.bs_filename, args.gzip_output), bs_payload)
+        write_json(output_path(target_dir, args.dos_filename, args.gzip_output), dos_payload)
 
         messages = []
         if bs_error:

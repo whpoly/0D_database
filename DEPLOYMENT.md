@@ -6,7 +6,7 @@ This repository is already deployable as a Dash app.
 
 I verified locally that:
 
-- the `web` Conda environment can import `dash`, `crystal_toolkit`, and `pymatgen`
+- the `web_2` Conda environment can import `dash`, `crystal_toolkit`, and `pymatgen`
 - `python main.py` starts the app successfully
 - `http://127.0.0.1:8050/` returns `200`
 - `http://127.0.0.1:8050/details?mid=mp-1101228_0D_V2F9` returns `200`
@@ -15,7 +15,7 @@ I verified locally that:
 
 - `.env.example`: runtime and path configuration template
 - `gunicorn.conf.py`: production Gunicorn configuration
-- `requirements-prod.txt`: Linux production dependencies
+- `requirements.txt`: unified Python dependencies
 - `scripts/run_dev.ps1`: local Windows development entrypoint
 - `scripts/run_prod.sh`: Linux production entrypoint
 - `deploy/systemd/zerodb.service.example`: systemd service template
@@ -57,19 +57,21 @@ The current deployment-friendly data layout is:
 
 If `dos_bs/<material_id>/bs.json` and `dos_bs/<material_id>/dos.json` are complete, the app can render BS/DOS without reading the raw VASP folders.
 
+If disk is tight, the app also supports `bs.json.gz` and `dos.json.gz` with the same folder layout.
+
 ## 5. Local development
 
 ### Windows PowerShell
 
 ```powershell
 Copy-Item .env.example .env
-.\scripts\run_dev.ps1
+.\scripts\run_dev.ps1 -CondaEnv web_2
 ```
 
 ### Or with Conda directly
 
 ```powershell
-conda activate web
+conda activate web_2
 python main.py
 ```
 
@@ -92,11 +94,16 @@ git clone <your-repo-url> .
 
 ### Step 2: create the environment
 
+Create a fresh environment, then install from the unified requirements file:
+
 ```bash
-conda env create -f environment.yml
-conda activate web
-pip install -r requirements-prod.txt
+conda create -n web_2 python=3.11 -y
+conda activate web_2
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
+
+`crystal-toolkit` pulls in the needed `dash` and `pymatgen` dependencies, and `gunicorn` is included automatically on non-Windows systems.
 
 ### Step 3: create the production `.env`
 
@@ -126,7 +133,7 @@ ZERO_DB_DFT_ROOT_DIR=ZeroDB_test_data/ZeroDB_test_data
 ### Step 4: test Gunicorn manually
 
 ```bash
-conda activate web
+conda activate web_2
 ./scripts/run_prod.sh
 ```
 
@@ -189,7 +196,18 @@ Deploy these:
 - `atomic_radius.json`
 - `dos_bs/`
 - `requirements.txt`
-- `requirements-prod.txt`
+
+For a PDOS-preserving low-disk deployment, generate compressed cache files:
+
+```bash
+python scripts/export_bs_dos_json.py --gzip-output --backup-dir-suffix ''
+```
+
+Or compress an existing cache in place:
+
+```bash
+python scripts/compress_bs_dos_cache.py --delete-originals
+```
 
 ### Deployment with raw VASP fallback
 
@@ -201,4 +219,7 @@ Deploy the above plus:
 
 - `python main.py` is now configuration-driven and suitable for development.
 - production should use Gunicorn, not Dash debug mode.
+- dependency management is now unified in `requirements.txt`.
+- if your deployed environment hits a `pourbaix` / `ELEMENTS_HO` import error, patch `crystal_toolkit/components/pourbaix.py` in that environment with a fallback `ELEMENTS_HO = {Element("H"), Element("O")}`.
 - if you change the BS/DOS cache, regenerate `dos_bs/` before redeploying.
+- if you are short on disk, do not keep both raw VASP folders and a `.bak` copy of `dos_bs/` on the same 40 GB disk.
