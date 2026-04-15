@@ -71,7 +71,9 @@ python main.py
 Production run example:
 
 ```bash
-ZERO_DB_GUNICORN_BIND=0.0.0.0:80 ZERO_DB_GUNICORN_WORKERS=2 ZERO_DB_GUNICORN_THREADS=2 ./scripts/run_prod.sh
+cp -n .env.example .env
+# Ensure .env uses ZERO_DB_GUNICORN_BIND=127.0.0.1:8050
+./scripts/run_prod.sh
 ```
 
 For a practical deployment path and a scalable architecture plan for thousands of materials, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).

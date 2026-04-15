@@ -2,7 +2,7 @@ import os
 
 
 host = os.getenv("ZERO_DB_HOST", "127.0.0.1")
-port = os.getenv("ZERO_DB_PORT", "80")
+port = os.getenv("ZERO_DB_PORT", "8050")
 
 wsgi_app = "main:server"
 bind = os.getenv("ZERO_DB_GUNICORN_BIND", f"{host}:{port}")
